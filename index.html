@@ -72,6 +72,10 @@ body{background:var(--charcoal);color:var(--cream);font-family:'DM Sans',sans-se
 .form-field select option{background:var(--charcoal);color:var(--cream)}
 .submit-btn{width:100%;padding:16px;background:var(--gold);color:var(--charcoal);font-family:'DM Sans',sans-serif;font-size:15px;font-weight:700;letter-spacing:1px;text-transform:uppercase;border:none;border-radius:8px;cursor:pointer;margin-top:8px;transition:background .3s,transform .15s}
 .submit-btn:hover{background:#d4b45c;transform:translateY(-1px)}
+.submit-btn:disabled{opacity:.6;cursor:not-allowed;transform:none}
+.form-msg{margin-top:16px;padding:14px 18px;border-radius:8px;font-size:14px;text-align:center;display:none}
+.form-msg.success{display:block;background:rgba(201,168,76,.12);border:1px solid rgba(201,168,76,.3);color:var(--gold)}
+.form-msg.error{display:block;background:rgba(200,50,50,.12);border:1px solid rgba(200,50,50,.3);color:#e05555}
 
 /* DIVIDER */
 .section-divider{width:48px;height:1px;background:var(--gold);margin:0 auto 32px;opacity:.4}
@@ -131,21 +135,21 @@ footer a{color:var(--gold);text-decoration:none}
     <div class="prizes-label">Enter Now</div>
     <div class="section-divider"></div>
     <p class="form-sub">Complete the form below for your chance to win</p>
-    <form onsubmit="return false">
+    <form id="entryForm">
       <div class="form-row">
-        <div class="form-field"><input type="text" placeholder="First Name" required></div>
-        <div class="form-field"><input type="text" placeholder="Last Name" required></div>
+        <div class="form-field"><input id="fName" type="text" placeholder="First Name" required></div>
+        <div class="form-field"><input id="lName" type="text" placeholder="Last Name" required></div>
       </div>
       <div class="form-row single">
-        <div class="form-field"><input type="email" placeholder="Email Address" required></div>
+        <div class="form-field"><input id="fEmail" type="email" placeholder="Email Address" required></div>
       </div>
       <div class="form-row single">
-        <div class="form-field"><input type="tel" placeholder="Phone Number" required></div>
+        <div class="form-field"><input id="fPhone" type="tel" placeholder="Phone Number" required></div>
       </div>
       <div class="form-row">
-        <div class="form-field"><input type="text" placeholder="Golf Handicap"></div>
+        <div class="form-field"><input id="fHandicap" type="text" placeholder="Golf Handicap"></div>
         <div class="form-field">
-          <select>
+          <select id="fProvince">
             <option value="" disabled selected>Province</option>
             <option>Eastern Cape</option><option>Free State</option><option>Gauteng</option>
             <option>KwaZulu-Natal</option><option>Limpopo</option><option>Mpumalanga</option>
@@ -153,7 +157,8 @@ footer a{color:var(--gold);text-decoration:none}
           </select>
         </div>
       </div>
-      <button type="submit" class="submit-btn">Enter Competition</button>
+      <button type="submit" class="submit-btn" id="submitBtn">Enter Competition</button>
+      <div id="formMsg" class="form-msg"></div>
     </form>
   </div>
 </div>
@@ -243,6 +248,63 @@ footer a{color:var(--gold);text-decoration:none}
   // Handle resize - ensure correct video is shown
   window.addEventListener('resize', function() {
     lastTime = -1;
+  });
+
+
+  // --- SUPABASE FORM SUBMISSION ---
+  var SUPABASE_URL = 'https://mqsauwftdwvapldinvpx.supabase.co';
+  var SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1xc2F1d2Z0ZHd2YXBsZGludnB4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMxMjcwODIsImV4cCI6MjA4ODcwMzA4Mn0.Xqe31AC4Tpd7N7jsG3n-DFdGdhKPyUvttoAt19dzDHM';
+
+  var entryForm = document.getElementById('entryForm');
+  var submitBtn = document.getElementById('submitBtn');
+  var formMsg = document.getElementById('formMsg');
+
+  entryForm.addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    // Disable button
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Submitting...';
+    formMsg.className = 'form-msg';
+    formMsg.textContent = '';
+
+    var payload = {
+      first_name: document.getElementById('fName').value.trim(),
+      last_name: document.getElementById('lName').value.trim(),
+      email: document.getElementById('fEmail').value.trim(),
+      phone: document.getElementById('fPhone').value.trim(),
+      handicap: document.getElementById('fHandicap').value.trim() || null,
+      province: document.getElementById('fProvince').value || null
+    };
+
+    fetch(SUPABASE_URL + '/rest/v1/competition_entries', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': SUPABASE_KEY,
+        'Authorization': 'Bearer ' + SUPABASE_KEY,
+        'Prefer': 'return=minimal'
+      },
+      body: JSON.stringify(payload)
+    })
+    .then(function(res) {
+      if (res.ok) {
+        formMsg.className = 'form-msg success';
+        formMsg.textContent = "You're in! Good luck — we'll be in touch if you win.";
+        entryForm.reset();
+      } else {
+        return res.json().then(function(err) { throw err; });
+      }
+    })
+    .catch(function(err) {
+      formMsg.className = 'form-msg error';
+      formMsg.textContent = 'Something went wrong. Please try again.';
+      console.error('Submission error:', err);
+    })
+    .finally(function() {
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Enter Competition';
+    });
   });
 })();
 </script>
